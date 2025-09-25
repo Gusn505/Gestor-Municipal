@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ciudadano
+  director
+  presidente
+  admin
+}
+
+enum TaskStatus {
+  pendiente
+  en_proceso
+  cumplido
+}
+
+model Departamento {
+  id            String   @id @default(uuid())
+  nombre        String   @unique
+  descripcion   String?
+  whatsappPhone String?  @map("whatsapp_phone")
+  creadoEn      DateTime @default(now()) @map("creado_en")
+
+  usuarios             User[]                 @relation("DeptUsuarios")
+  tareas               Tarea[]
+  NotificacionWhatsApp NotificacionWhatsApp[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  rol          Role     @default(ciudadano)
+  telefono     String?
+  creadoEn     DateTime @default(now()) @map("creado_en")
+
+  departamentoId String?       @map("departamento_id")
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id], name: "DeptUsuarios")
+
+  tareasSolicitadas Tarea[]          @relation("Solicitante")
+  evidencias        Evidencia[]      @relation("SubidoPor")
+  historialCambios  HistorialTarea[] @relation("CambioPor")
+}
+
+model Tarea {
+  id            String     @id @default(uuid())
+  referencia    String     @unique
+  titulo        String
+  descripcion   String?
+  fechaAsignada DateTime   @default(now()) @map("fecha_asignada")
+  fechaLimite   DateTime?  @map("fecha_limite")
+  fechaCumplido DateTime?  @map("fecha_cumplido")
+  estado        TaskStatus @default(pendiente)
+  creadoEn      DateTime   @default(now()) @map("creado_en")
+  actualizadoEn DateTime   @updatedAt @map("actualizado_en")
+
+  departamentoId String
+  departamento   Departamento @relation(fields: [departamentoId], references: [id])
+
+  ciudadanoId String? @map("ciudadano_id")
+  ciudadano   User?   @relation("Solicitante", fields: [ciudadanoId], references: [id])
+
+  nombreSolicitante    String? @map("nombre_solicitante")
+  direccionSolicitante String? @map("direccion_solicitante")
+  telefonoSolicitante  String? @map("telefono_solicitante")
+
+  evidencias     Evidencia[]
+  historial      HistorialTarea[]
+  notificaciones NotificacionWhatsApp[]
+}
+
+model Evidencia {
+  id          String   @id @default(uuid())
+  tareaId     String
+  tarea       Tarea    @relation(fields: [tareaId], references: [id])
+  url         String
+  descripcion String?
+  subidoPorId String?  @map("subido_por")
+  subidoPor   User?    @relation("SubidoPor", fields: [subidoPorId], references: [id])
+  creadoEn    DateTime @default(now()) @map("creado_en")
+}
+
+model HistorialTarea {
+  id             String      @id @default(uuid())
+  tareaId        String
+  tarea          Tarea       @relation(fields: [tareaId], references: [id])
+  estadoAnterior TaskStatus?
+  estadoNuevo    TaskStatus
+  cambiadoPorId  String?     @map("cambiado_por")
+  cambiadoPor    User?       @relation("CambioPor", fields: [cambiadoPorId], references: [id])
+  nota           String?
+  creadoEn       DateTime    @default(now()) @map("creado_en")
+}
+
+model NotificacionWhatsApp {
+  id             String        @id @default(uuid())
+  tareaId        String?
+  tarea          Tarea?        @relation(fields: [tareaId], references: [id])
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  telefonoEnvio  String?       @map("telefono_envio")
+  payload        Json?
+  respuesta      Json?
+  estadoEnvio    String?       @map("estado_envio")
+  creadoEn       DateTime      @default(now()) @map("creado_en")
+}
