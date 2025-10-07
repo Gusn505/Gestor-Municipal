@@ -79,7 +79,7 @@ model Tarea {
 model Evidencia {
   id          String   @id @default(uuid())
   tareaId     String
-  tarea       Tarea    @relation(fields: [tareaId], references: [id])
+  tarea       Tarea @relation(fields: [tareaId], references: [id], onDelete: Cascade)
   url         String
   descripcion String?
   subidoPorId String?  @map("subido_por")
@@ -90,7 +90,7 @@ model Evidencia {
 model HistorialTarea {
   id             String      @id @default(uuid())
   tareaId        String
-  tarea          Tarea       @relation(fields: [tareaId], references: [id])
+  tarea          Tarea       @relation(fields: [tareaId], references: [id], onDelete: Cascade)
   estadoAnterior TaskStatus?
   estadoNuevo    TaskStatus
   cambiadoPorId  String?     @map("cambiado_por")

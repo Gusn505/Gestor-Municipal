@@ -3,10 +3,18 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const prisma = require('./prismaClient'); // <-- Importa el cliente de Prisma
+const authRoutes = require('./routes/auth.js');
+const taskRoutes = require('./routes/tareas.js');
+const directorRoutes = require('./routes/director.js');
+const evidenciaRoutes = require('./routes/evidencias.js');
+const adminRoutes = require('./routes/admin.js');
+const swaggerUi = require('swagger-ui-express'); 
+const swaggerSpec = require('./swaggerConfig');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => res.json({ ok: true }));
 
@@ -33,49 +41,15 @@ app.get('/api/departamentos', async (req, res) => {
   }
 });
 
+app.use('/api/auth', authRoutes);
+app.use('/api/tareas', taskRoutes);
+app.use('/api/director', directorRoutes);
+app.use('/api/evidencias', evidenciaRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // POST /api/tareas - Crear una nueva tarea
-app.post('/api/tareas', async (req, res) => {
-  try {
-    const {
-      titulo, descripcion, departamentoId,
-      nombreSolicitante, direccionSolicitante, telefonoSolicitante, fechaLimite, ciudadanoId
-    } = req.body;
 
-    // Generar un número de referencia único y simple
-    const referencia = 'GEST-' + Date.now();
-
-    const tarea = await prisma.tarea.create({
-      data: {
-        referencia,
-        titulo,
-        descripcion,
-        // Así se conectan las relaciones en Prisma
-        departamento: { connect: { id: departamentoId } },
-        ciudadano: ciudadanoId ? { connect: { id: ciudadanoId } } : undefined,
-        nombreSolicitante,
-        direccionSolicitante,
-        telefonoSolicitante,
-        fechaLimite: fechaLimite ? new Date(fechaLimite) : null,
-      }
-    });
-
-    // Crear el primer registro en el historial para esta tarea
-    await prisma.historialTarea.create({
-      data: {
-        tarea: { connect: { id: tarea.id } },
-        estadoAnterior: null, // No hay estado anterior, es la creación
-        estadoNuevo: 'pendiente',
-        nota: 'Reporte creado',
-      }
-    });
-
-    // Devolver la tarea creada con un código 201 (Created)
-    res.status(201).json(tarea);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'No se pudo crear la tarea', detail: err.message });
-  }
-});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Backend listening on ${PORT}`));
